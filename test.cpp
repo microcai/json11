@@ -61,7 +61,7 @@ CHECK_TRAIT(is_nothrow_destructible<Json>);
 
 JSON11_TEST_CASE(json11_test) {
     const string simple_test =
-        R"({"k1":"v1", "k2":42, "k3":["a",123,true,false,null]})";
+        R"({"k1":"v1", "k2":42, "k3":["a",123.123,true,false,null]})";
 
     string err;
     const auto json = Json::parse(simple_test, err);
@@ -158,20 +158,20 @@ JSON11_TEST_CASE(json11_test) {
     // Json literals
     const Json obj = Json::object({
         { "k1", "v1" },
-        { "k2", 42.0 },
-        { "k3", Json::array({ "a", 123.0, true, false, nullptr }) },
+        { "k2", json11::decimal(42.0) },
+        { "k3", Json::array({ "a", json11::decimal("123.123"), true, false, nullptr }) },
     });
 
     std::cout << "obj: " << obj.dump() << "\n";
-    JSON11_TEST_ASSERT(obj.dump() == "{\"k1\": \"v1\", \"k2\": 42, \"k3\": [\"a\", 123, true, false, null]}");
+    JSON11_TEST_ASSERT(obj.dump() == "{\"k1\": \"v1\", \"k2\": 42, \"k3\": [\"a\", 123.123, true, false, null]}");
 
     JSON11_TEST_ASSERT(Json("a").number_value() == 0);
     JSON11_TEST_ASSERT(Json("a").string_value() == "a");
     JSON11_TEST_ASSERT(Json().number_value() == 0);
 
     JSON11_TEST_ASSERT(obj == json);
-    JSON11_TEST_ASSERT(Json(42) == Json(42.0));
-    JSON11_TEST_ASSERT(Json(42) != Json(42.1));
+    JSON11_TEST_ASSERT(Json(42) == Json(json11::decimal(42.0)));
+    JSON11_TEST_ASSERT(Json(42) != Json(json11::decimal(42.1)));
 
     const string unicode_escape_test =
         R"([ "blah\ud83d\udca9blah\ud83dblah\udca9blah\u0000blah\u1234" ])";

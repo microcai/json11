@@ -24,8 +24,7 @@ endif()
 
 add_library(json11 json11.cpp)
 target_include_directories(json11 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_options(json11
-  PRIVATE -fPIC -fno-rtti -fno-exceptions -Wall)
+target_compile_options(json11 PRIVATE -fPIC  -Wall)
 
 # Set warning flags, which may vary per platform
 include(CheckCXXCompilerFlag)
@@ -40,6 +39,10 @@ endforeach()
 configure_file("json11.pc.in" "json11.pc" @ONLY)
 
 if (JSON11_BUILD_TESTS)
+
+  set(Boost_USE_STATIC_LIBS ON)
+  find_package(Boost 1.55 REQUIRED system exception)
+  target_link_libraries(json11 Boost::system Boost::exception)
 
   # enable test for DR1467, described here: https://llvm.org/bugs/show_bug.cgi?id=23812
   if(JSON11_ENABLE_DR1467_CANARY)
