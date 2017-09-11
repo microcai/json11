@@ -54,15 +54,13 @@ static void dump(NullStruct, string &out) {
     out += "null";
 }
 
-static void dump(double value, string &out) {
-    if (std::isfinite(value)) {
-        char buf[32];
-        snprintf(buf, sizeof buf, "%.17g", value);
-        out += buf;
-    } else {
-        out += "null";
-    }
+static void dump(decimal value, string &out) {
+    std::stringstream os;
+    os.precision(std::numeric_limits<decimal>::max_digits10);  // Ensure all potentially significant bits are output.
+    os << value;
+    out += os.str();
 }
+
 
 static void dump(int value, string &out) {
     char buf[32];
@@ -170,17 +168,20 @@ protected:
     void dump(string &out) const override { json11::dump(m_value, out); }
 };
 
-class JsonDouble final : public Value<Json::NUMBER, double> {
-    double number_value() const override { return m_value; }
+class JsonDouble final : public Value<Json::NUMBER, decimal> {
+    decimal number_value() const override { return m_value; }
     int int_value() const override { return static_cast<int>(m_value); }
     bool equals(const JsonValue * other) const override { return m_value == other->number_value(); }
     bool less(const JsonValue * other)   const override { return m_value <  other->number_value(); }
 public:
+	explicit JsonDouble(decimal value) : Value(value) {}
+	explicit JsonDouble(long value) : Value(value) {}
+	explicit JsonDouble(long long value) : Value(value) {}
     explicit JsonDouble(double value) : Value(value) {}
 };
 
 class JsonInt final : public Value<Json::NUMBER, int> {
-    double number_value() const override { return m_value; }
+    decimal number_value() const override { return m_value; }
     int int_value() const override { return m_value; }
     bool equals(const JsonValue * other) const override { return m_value == other->number_value(); }
     bool less(const JsonValue * other)   const override { return m_value <  other->number_value(); }
@@ -253,6 +254,7 @@ static const Json & static_null() {
 Json::Json() noexcept                  : m_ptr(statics().null) {}
 Json::Json(std::nullptr_t) noexcept    : m_ptr(statics().null) {}
 Json::Json(double value)               : m_ptr(make_shared<JsonDouble>(value)) {}
+Json::Json(decimal value)               : m_ptr(make_shared<JsonDouble>(value)) {}
 Json::Json(int value)                  : m_ptr(make_shared<JsonInt>(value)) {}
 Json::Json(bool value)                 : m_ptr(value ? statics().t : statics().f) {}
 Json::Json(const string &value)        : m_ptr(make_shared<JsonString>(value)) {}
@@ -268,7 +270,7 @@ Json::Json(Json::object &&values)      : m_ptr(make_shared<JsonObject>(move(valu
  */
 
 Json::Type Json::type()                           const { return m_ptr->type();         }
-double Json::number_value()                       const { return m_ptr->number_value(); }
+decimal Json::number_value()                      const { return m_ptr->number_value(); }
 int Json::int_value()                             const { return m_ptr->int_value();    }
 bool Json::bool_value()                           const { return m_ptr->bool_value();   }
 const string & Json::string_value()               const { return m_ptr->string_value(); }
@@ -277,7 +279,7 @@ const map<string, Json> & Json::object_items()    const { return m_ptr->object_i
 const Json & Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
 const Json & Json::operator[] (const string &key) const { return (*m_ptr)[key];         }
 
-double                    JsonValue::number_value()              const { return 0; }
+decimal                   JsonValue::number_value()              const { return decimal(); }
 int                       JsonValue::int_value()                 const { return 0; }
 bool                      JsonValue::bool_value()                const { return false; }
 const string &            JsonValue::string_value()              const { return statics().empty_string; }
@@ -618,7 +620,9 @@ struct JsonParser final {
                 i++;
         }
 
-        return std::strtod(str.c_str() + start_pos, nullptr);
+        std::string decimal_str(str.c_str() + start_pos, i - start_pos);
+
+        return decimal(decimal_str);
     }
 
     /* expect(str, res)

@@ -55,6 +55,7 @@
 #include <map>
 #include <memory>
 #include <initializer_list>
+#include <boost/multiprecision/cpp_dec_float.hpp>
 
 #ifdef _MSC_VER
     #if _MSC_VER <= 1800 // VS 2013
@@ -69,6 +70,16 @@
 #endif
 
 namespace json11 {
+
+using decimal = boost::multiprecision::cpp_dec_float_50;
+
+inline std::string decimal_to_string(const decimal& value)
+{
+	std::stringstream os;
+	os.precision(std::numeric_limits<decimal>::max_digits10);  // Ensure all potentially significant bits are output.
+	os << value;
+	return os.str();
+}
 
 enum JsonParse {
     STANDARD, COMMENTS
@@ -91,6 +102,7 @@ public:
     Json() noexcept;                // NUL
     Json(std::nullptr_t) noexcept;  // NUL
     Json(double value);             // NUMBER
+    Json(decimal value);            // NUMBER
     Json(int value);                // NUMBER
     Json(bool value);               // BOOL
     Json(const std::string &value); // STRING
@@ -135,7 +147,7 @@ public:
     // Return the enclosed value if this is a number, 0 otherwise. Note that json11 does not
     // distinguish between integer and non-integer numbers - number_value() and int_value()
     // can both be applied to a NUMBER-typed object.
-    double number_value() const;
+    decimal number_value() const;
     int int_value() const;
 
     // Return the enclosed value if this is a boolean, false otherwise.
@@ -218,7 +230,7 @@ protected:
     virtual bool equals(const JsonValue * other) const = 0;
     virtual bool less(const JsonValue * other) const = 0;
     virtual void dump(std::string &out) const = 0;
-    virtual double number_value() const;
+    virtual decimal number_value() const;
     virtual int int_value() const;
     virtual bool bool_value() const;
     virtual const std::string &string_value() const;
